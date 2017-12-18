@@ -34,6 +34,11 @@ const (
 	assert  = "[ASST]"
 )
 
+type Config struct{
+	SaveLog bool
+	
+}
+
 /**
  日志保存方式
  */
