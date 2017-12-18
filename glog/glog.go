@@ -22,23 +22,23 @@ const (
 
 const (
 	//详情
-	verbose = "[VERB]"
+	LevelVerbose = "[VERB]"
 	//追踪
-	trace   = "[TRAC]"
+	LevelTrace = "[TRAC]"
 	//错误
-	errors  = "[ERRO]"
+	LevelError = "[ERRO]"
 	//警告
-	warn    = "[WARN]"
+	LevelWarn = "[WARN]"
 	//信息
-	info    = "[INFO]"
+	LevelInfo = "[INFO]"
 	//调试
-	debug   = "[DBUG]"
+	LevelDebug = "[DBUG]"
 	//断言
-	assert  = "[ASST]"
+	LevelAssert = "[ASST]"
 )
 
 //级别列表，从 一般到重要
-var levels = [7]string{debug,trace,verbose,assert,info,warn,errors}
+var levels = [7]string{LevelDebug, LevelTrace, LevelVerbose, LevelAssert, LevelInfo, LevelWarn, LevelError}
 //级别索引
 var levelsIndex = map[string]int{}
 
@@ -74,7 +74,7 @@ var levelMu sync.Mutex
 
 
 func init(){
-	gg = NewGlog(&Glog{ShowLevel:debug,SaveLevel:""})
+	gg = NewGlog(&Glog{ShowLevel: LevelDebug,SaveLevel:""})
 	levelsIndex = make(map[string]int,len(levels))
 	for k,v := range levels{
 		levelsIndex[v] = k
@@ -132,18 +132,21 @@ func (g *Glog)output(level,s string,calldepth int){
 			if !ok {
 				file = "???"
 				line = 0
-			}
-			if g.Flag & ShortFile != 0{
-				short := file
-				for i := len(file) - 1;i>0;i--{
-					if file[i] == '/'{
-						short = file[i+1:]
-						break
+			} else {
+				file, _ := filepath.Abs(file)
+				//Trace(err2)
+				if g.Flag&ShortFile != 0 {
+					short := file
+					for i := len(file) - 1; i > 0; i-- {
+						if file[i] == '/' {
+							short = file[i+1:]
+							break
+						}
 					}
+					file = short
 				}
-				file  = short
 			}
-			fs := fmt.Sprintf("file:%s (%d)",file,line)
+			fs := fmt.Sprintf("%10s line:%d %s","",line,file)
 			if showLevelBool{
 				shows = append(shows,fs)
 			}
@@ -176,53 +179,53 @@ func (g *Glog)Flush(){
 }
 
 func (g *Glog)Debug( a ...interface{}){
-	if !g.checkLevelAll(debug){
+	if !g.checkLevelAll(LevelDebug){
 		return
 	}
-	g.output(debug,fmt.Sprint(a...),2)
+	g.output(LevelDebug,fmt.Sprint(a...),2)
 }
 
 func (g *Glog)Trace(a ...interface{}){
-	if !g.checkLevelAll(trace){
+	if !g.checkLevelAll(LevelTrace){
 		return
 	}
-	g.output(trace,fmt.Sprint( a...),2)
+	g.output(LevelTrace,fmt.Sprint( a...),2)
 }
 
 func (g *Glog)Verbose(a ...interface{}){
-	if !g.checkLevelAll(verbose){
+	if !g.checkLevelAll(LevelVerbose){
 		return
 	}
-	g.output(verbose,fmt.Sprint(a...),2)
+	g.output(LevelVerbose,fmt.Sprint(a...),2)
 }
 
 func (g *Glog)Asset(a ...interface{}){
-	if !g.checkLevelAll(assert){
+	if !g.checkLevelAll(LevelAssert){
 		return
 	}
-	g.output(assert,fmt.Sprint( a...),2)
+	g.output(LevelAssert,fmt.Sprint( a...),2)
 }
 
 
 func (g *Glog)Info(a ...interface{}){
-	if !g.checkLevelAll(info){
+	if !g.checkLevelAll(LevelInfo){
 		return
 	}
-	g.output(info,fmt.Sprint(a...),2)
+	g.output(LevelInfo,fmt.Sprint(a...),2)
 }
 
 func (g *Glog)Warn(a ...interface{}){
-	if !g.checkLevelAll(warn){
+	if !g.checkLevelAll(LevelWarn){
 		return
 	}
-	g.output(warn,fmt.Sprint(a...),2)
+	g.output(LevelWarn,fmt.Sprint(a...),2)
 }
 
 func (g *Glog)Error(a ...interface{}){
-	if !g.checkLevelAll(errors){
+	if !g.checkLevelAll(LevelError){
 		return
 	}
-	g.output(errors,fmt.Sprint(a...),2)
+	g.output(LevelError,fmt.Sprint(a...),2)
 }
 
 
@@ -267,19 +270,19 @@ func Asset(a ...interface{}) {
 func formatLevel(level string) string {
 
 	switch level {
-	case verbose:
+	case LevelVerbose:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_white, level)
-	case trace:
+	case LevelTrace:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_cyan, level)
-	case errors:
+	case LevelError:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_red, level)
-	case warn:
+	case LevelWarn:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_yellow, level)
-	case info:
+	case LevelInfo:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_green, level)
-	case debug:
+	case LevelDebug:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_blue, level)
-	case assert:
+	case LevelAssert:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_magenta, level)
 	default:
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color_white, level)

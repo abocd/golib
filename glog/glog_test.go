@@ -18,10 +18,11 @@ func TestError(t *testing.T) {
 func TestAll(t *testing.T){
 	//fmt.Println("test all")
 	gg := NewGLogFile("../temp/1.log",&Glog{
-		ShowLevel:debug,
-		SaveLevel:warn,
+		ShowLevel: LevelDebug,
+		SaveLevel: LevelWarn,
+		Flag:LongFile,
 	})
-	gg.Info("INNNN")
+	gg.Info("this is info")
 	gg.Warn("this is warn")
-	gg.Error("FFFF")
+	gg.Error("show error")
 }
