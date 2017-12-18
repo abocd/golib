@@ -7,6 +7,7 @@ import (
 	"sync"
 	"runtime"
 	"strings"
+	"path/filepath"
 )
 
 const (
@@ -60,6 +61,8 @@ type Glog struct{
 	saveLevelIndex int
 	saveLevelBool bool
 	MaxLogSize int
+	//是否需要手动flush写入文件
+	NeedFlush bool
 	// 文件级别
 	Flag int
     // 日志保存方式
@@ -82,26 +85,6 @@ func init(){
  初始化
  */
 func NewGlog(g *Glog)*Glog {
-	//if g.ShowLevel != ""{
-	//	index := getLevelIndex(g.ShowLevel)
-	//	if index >= 0{
-	//		g.showLevelIndex = index
-	//	} else {
-	//		g.showLevelIndex = 999
-	//	}
-	//} else {
-	//	g.showLevelIndex = 999
-	//}
-	//if g.SaveLevel != ""{
-	//	index := getLevelIndex(g.SaveLevel)
-	//	if index >= 0{
-	//		g.saveLevelIndex = index
-	//	} else {
-	//		g.saveLevelIndex = 999
-	//	}
-	//} else {
-	//	g.saveLevelIndex = 999
-	//}
 	return g
 }
 
@@ -116,14 +99,27 @@ func NewGLogFile(filename string,g *Glog)*Glog {
 	/**
 	 文件必须使用锁
 	 */
+	filename,err := filepath.Abs(filename)
+	if err != nil{
+		Error(err.Error())
+	}
+	dir := filepath.Dir(filename)
+
+	_,err = os.Stat(dir)
+	if err != nil{
+		Error(err.Error())
+	}
+	if os.IsNotExist(err){
+		os.MkdirAll(dir,0777)
+	}
 	file,_ := os.OpenFile(filename,os.O_CREATE|os.O_RDWR|os.O_APPEND,0666)
 	g.out = bufio.NewWriter(file)
     return NewGlog(g)
 }
 
-func (g *Glog)output(calldepth int,s string){
-	var shows = []string{s}
-	var saves = []string{s}
+func (g *Glog)output(level,s string,calldepth int){
+	var shows = []string{fmt.Sprintf("%s%s",formatPrefix(formatLevel(level)),s)}
+	var saves = []string{fmt.Sprintf("%s%s",formatPrefix(level),s)}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	//设置了输出文件
@@ -162,111 +158,109 @@ func (g *Glog)output(calldepth int,s string){
 	}
 	if g.saveLevelBool{
 		g.out.WriteString(strings.Join(saves,"\n"))
-		g.out.WriteByte('\n')
+		g.out.WriteString("\n")
 		//需要移除掉 标记颜色的内容
 		//增加是否需要立即保存的
+		if !g.NeedFlush {
+			g.out.Flush()
+		}
+	}
+}
+
+func (g *Glog)Flush(){
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.NeedFlush {
 		g.out.Flush()
 	}
 }
 
-func (g *Glog)Debug(format string, a ...interface{}){
+func (g *Glog)Debug( a ...interface{}){
 	if !g.checkLevelAll(debug){
 		return
 	}
-	level := formatLevel(debug)
-	g.output(2,fmt.Sprint(formatPrefix(level), fmt.Sprintf(format, a...)))
+	g.output(debug,fmt.Sprint(a...),2)
 }
 
-func (g *Glog)Trace(format string, a ...interface{}){
+func (g *Glog)Trace(a ...interface{}){
 	if !g.checkLevelAll(trace){
 		return
 	}
-	level := formatLevel(trace)
-	g.output(2,fmt.Sprint(formatPrefix(level), fmt.Sprintf(format, a...)))
+	g.output(trace,fmt.Sprint( a...),2)
 }
 
-func (g *Glog)Verbose(format string, a ...interface{}){
+func (g *Glog)Verbose(a ...interface{}){
 	if !g.checkLevelAll(verbose){
 		return
 	}
-	level := formatLevel(verbose)
-	g.output(2,fmt.Sprint(formatPrefix(level), fmt.Sprintf(format, a...)))
+	g.output(verbose,fmt.Sprint(a...),2)
 }
 
-func (g *Glog)Asset(format string, a ...interface{}){
+func (g *Glog)Asset(a ...interface{}){
 	if !g.checkLevelAll(assert){
 		return
 	}
-	level := formatLevel(assert)
-	g.output(2,fmt.Sprint(formatPrefix(level), fmt.Sprintf(format, a...)))
+	g.output(assert,fmt.Sprint( a...),2)
 }
 
 
-func (g *Glog)Info(format string, a ...interface{}){
+func (g *Glog)Info(a ...interface{}){
 	if !g.checkLevelAll(info){
 		return
 	}
-	level := formatLevel(info)
-	g.output(2,fmt.Sprint(formatPrefix(level), fmt.Sprintf(format, a...)))
+	g.output(info,fmt.Sprint(a...),2)
 }
 
-func (g *Glog)Warn(format string, a ...interface{}){
+func (g *Glog)Warn(a ...interface{}){
 	if !g.checkLevelAll(warn){
 		return
 	}
-	level := formatLevel(warn)
-	g.output(2,fmt.Sprint(formatPrefix(level), fmt.Sprintf(format, a...)))
+	g.output(warn,fmt.Sprint(a...),2)
 }
 
-func (g *Glog)Error(format string, a ...interface{}){
+func (g *Glog)Error(a ...interface{}){
 	if !g.checkLevelAll(errors){
 		return
 	}
-	level := formatLevel(errors)
-	g.output(2,fmt.Sprint(formatPrefix(level), fmt.Sprintf(format, a...)))
+	g.output(errors,fmt.Sprint(a...),2)
 }
-
-
-
-
-
 
 
 // https://en.wikipedia.org/wiki/ANSI_escape_code#cite_note-ecma48-13
 
-func Verbose( format string, a ...interface{}) {
+func Verbose( a ...interface{}) {
 
-	gg.Verbose(format,a...)
+	gg.Verbose(a...)
 }
 
-func Trace(format string, a ...interface{}) {
+func Trace(a ...interface{}) {
 
-	gg.Trace(format,a...)
+	gg.Trace(a...)
 }
 
-func Error(format string, a ...interface{}) {
+func Error(a ...interface{}) {
 
-	gg.Error(format,a...)
+	gg.Error(a...)
 }
 
-func Warn( format string, a ...interface{}) {
+func Warn( a ...interface{}) {
 
-	gg.Warn(format,a...)
+	gg.Warn(a...)
 }
 
-func Info( format string, a ...interface{}) {
+func Info( a ...interface{}) {
 
-	gg.Info(format,a...)
+	gg.Info(a...)
 }
 
-func Debug( format string, a ...interface{}) {
+func Debug( a ...interface{}) {
 
-	gg.Debug(format,a...)
+	gg.Debug(a...)
 }
 
-func Asset(format string, a ...interface{}) {
+func Asset(a ...interface{}) {
 
-	gg.Asset(format,a...)
+	gg.Asset(a...)
 }
 
 // https://en.wikipedia.org/wiki/ANSI_escape_code#cite_note-ecma48-13
