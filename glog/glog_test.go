@@ -21,9 +21,9 @@ func TestAll(t *testing.T){
 		ShowLevel: LevelDebug,
 		SaveLevel: LevelWarn,
 		Flag:ShortFile,
-		MaxLogSize:10240,
+		MaxLogSize:100,
 	})
-	for i:=1;i<=10;i++ {
+	for i:=1;i<=100;i++ {
 		gg.Info(i,"this is info")
 		gg.Warn(i,"this is warn")
 		gg.Error(i,"show error")

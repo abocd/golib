@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"path/filepath"
+	//"io/ioutil"
+	"io/ioutil"
 )
 
 const (
@@ -213,11 +215,37 @@ func getLogFileIndex(filename string)int{
 	var newfile string
 	for i:=1;i<=5000;i++{
 		newfile =  fmt.Sprintf("%s.%d",filename,i)
+		//效率比较地，获取文件列表是不是更快？
 		_,err := os.Stat(newfile)
 		if err != nil && os.IsNotExist(err){
 			return i
 		}
 	}
+
+	//dir := filepath.Dir(filename)
+	//fileList,err := ioutil.ReadDir(dir)
+	//if err != nil{
+	//	return 1
+	//}
+	//files := make(map[string]int)
+	//basename := filepath.Base(filename)
+	//for _,v := range fileList{
+	//	//name := v.Name()
+	//	//if strings.Index(name,basename) !=0{
+	//	//	continue
+	//	//}
+	//	files[v.Name()] = 1
+	//}
+	//if len(files) == 0{
+	//	return 1
+	//}
+	//var newfile string
+	//for i:=1;i<=5000;i++{
+	//	newfile =  fmt.Sprintf("%s.%d",basename,i)
+	//	if _,ok := files[newfile];!ok{
+	//		return i
+	//	}
+	//}
 	return 1
 }
 
