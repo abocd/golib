@@ -60,11 +60,14 @@ type Glog struct{
 	SaveLevel string
 	saveLevelIndex int
 	saveLevelBool bool
+	//最大的日志大小，字节
 	MaxLogSize int
 	//是否需要手动flush写入文件
 	NeedFlush bool
 	// 文件级别
 	Flag int
+	//文件名称
+	LogFileName string
     // 日志保存方式
 	out *bufio.Writer
 }
@@ -112,9 +115,17 @@ func NewGLogFile(filename string,g *Glog)*Glog {
 	if os.IsNotExist(err){
 		os.MkdirAll(dir,0777)
 	}
-	file,_ := os.OpenFile(filename,os.O_CREATE|os.O_RDWR|os.O_APPEND,0666)
-	g.out = bufio.NewWriter(file)
+	g.LogFileName = filename
+	g.createLogFile()
     return NewGlog(g)
+}
+
+func (g *Glog)createLogFile(){
+	file,err := os.OpenFile(g.LogFileName,os.O_CREATE|os.O_RDWR|os.O_APPEND,0666)
+	if err != nil{
+		Error(err)
+	}
+	g.out = bufio.NewWriter(file)
 }
 
 func (g *Glog)output(level,s string,calldepth int){
@@ -133,7 +144,7 @@ func (g *Glog)output(level,s string,calldepth int){
 				file = "???"
 				line = 0
 			} else {
-				file, _ := filepath.Abs(file)
+				file, _ = filepath.Abs(file)
 				//Trace(err2)
 				if g.Flag&ShortFile != 0 {
 					short := file
@@ -166,6 +177,7 @@ func (g *Glog)output(level,s string,calldepth int){
 		//增加是否需要立即保存的
 		if !g.NeedFlush {
 			g.out.Flush()
+			g.SplitLogFile()
 		}
 	}
 }
@@ -175,7 +187,38 @@ func (g *Glog)Flush(){
 	defer g.mu.Unlock()
 	if g.NeedFlush {
 		g.out.Flush()
+		g.SplitLogFile()
 	}
+}
+
+//切割日志文件
+func (g *Glog)SplitLogFile(){
+	if g.MaxLogSize <=0 || !g.saveLevelBool{
+		//没有设置日志大小，或是没有保存日志，则跳出
+		return
+	}
+	file,err := os.Stat(g.LogFileName)
+	if err != nil{
+		return
+	}
+	if file.Size() > int64(g.MaxLogSize){
+        index := getLogFileIndex(g.LogFileName)
+		if os.Rename(g.LogFileName,fmt.Sprintf("%s.%d",g.LogFileName,index)) ==nil{
+			g.createLogFile()
+		}
+	}
+}
+
+func getLogFileIndex(filename string)int{
+	var newfile string
+	for i:=1;i<=5000;i++{
+		newfile =  fmt.Sprintf("%s.%d",filename,i)
+		_,err := os.Stat(newfile)
+		if err != nil && os.IsNotExist(err){
+			return i
+		}
+	}
+	return 1
 }
 
 func (g *Glog)Debug( a ...interface{}){

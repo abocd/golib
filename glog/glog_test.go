@@ -20,9 +20,12 @@ func TestAll(t *testing.T){
 	gg := NewGLogFile("../temp/1.log",&Glog{
 		ShowLevel: LevelDebug,
 		SaveLevel: LevelWarn,
-		Flag:LongFile,
+		Flag:ShortFile,
+		MaxLogSize:10240,
 	})
-	gg.Info("this is info")
-	gg.Warn("this is warn")
-	gg.Error("show error")
+	for i:=1;i<=10;i++ {
+		gg.Info(i,"this is info")
+		gg.Warn(i,"this is warn")
+		gg.Error(i,"show error")
+	}
 }
