@@ -9,7 +9,9 @@ import (
 	"strings"
 	"path/filepath"
 	//"io/ioutil"
+	//"io/ioutil"
 	"io/ioutil"
+	"strconv"
 )
 
 const (
@@ -212,41 +214,29 @@ func (g *Glog)SplitLogFile(){
 }
 
 func getLogFileIndex(filename string)int{
-	var newfile string
-	for i:=1;i<=5000;i++{
-		newfile =  fmt.Sprintf("%s.%d",filename,i)
-		//效率比较地，获取文件列表是不是更快？
-		_,err := os.Stat(newfile)
-		if err != nil && os.IsNotExist(err){
-			return i
+	dir := filepath.Dir(filename)
+	fileList,err := ioutil.ReadDir(dir)
+	if err != nil{
+		return 1
+	}
+	basename := filepath.Base(filename)
+	basenameAfter := fmt.Sprintf("%s.",basename)
+	var defaultIndex int
+	for _,v := range fileList{
+		name := v.Name()
+		if strings.Index(name,basenameAfter) !=0{
+			continue
+		}
+		index := strings.Replace(name,basenameAfter,"",1)
+		indexInt,err := strconv.Atoi(index)
+		if err != nil{
+			indexInt = 0
+		}
+		if indexInt > defaultIndex{
+			defaultIndex = indexInt
 		}
 	}
-
-	//dir := filepath.Dir(filename)
-	//fileList,err := ioutil.ReadDir(dir)
-	//if err != nil{
-	//	return 1
-	//}
-	//files := make(map[string]int)
-	//basename := filepath.Base(filename)
-	//for _,v := range fileList{
-	//	//name := v.Name()
-	//	//if strings.Index(name,basename) !=0{
-	//	//	continue
-	//	//}
-	//	files[v.Name()] = 1
-	//}
-	//if len(files) == 0{
-	//	return 1
-	//}
-	//var newfile string
-	//for i:=1;i<=5000;i++{
-	//	newfile =  fmt.Sprintf("%s.%d",basename,i)
-	//	if _,ok := files[newfile];!ok{
-	//		return i
-	//	}
-	//}
-	return 1
+	return defaultIndex
 }
 
 func (g *Glog)Debug( a ...interface{}){
