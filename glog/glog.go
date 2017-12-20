@@ -185,7 +185,9 @@ func (g *Glog)output(level,s string,calldepth int){
 		}
 	}
 }
-
+/**
+ 刷新文件
+ */
 func (g *Glog)Flush(){
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -217,11 +219,11 @@ func getLogFileIndex(filename string)int{
 	dir := filepath.Dir(filename)
 	fileList,err := ioutil.ReadDir(dir)
 	if err != nil{
-		return 1
+		return 0
 	}
 	basename := filepath.Base(filename)
 	basenameAfter := fmt.Sprintf("%s.",basename)
-	var defaultIndex int
+	var defaultIndex = 0
 	for _,v := range fileList{
 		name := v.Name()
 		if strings.Index(name,basenameAfter) !=0{
@@ -236,6 +238,7 @@ func getLogFileIndex(filename string)int{
 			defaultIndex = indexInt
 		}
 	}
+	defaultIndex ++
 	return defaultIndex
 }
 

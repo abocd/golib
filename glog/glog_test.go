@@ -3,6 +3,7 @@ package glog
 import (
 	"testing"
 	//"fmt"
+	"strings"
 )
 
 func TestAsset(t *testing.T) {
@@ -21,11 +22,11 @@ func TestAll(t *testing.T){
 		ShowLevel: LevelDebug,
 		SaveLevel: LevelWarn,
 		Flag:ShortFile,
-		MaxLogSize:100,
+		MaxLogSize:1000,
 	})
-	for i:=1;i<=100;i++ {
+	for i:=1;i<=1000;i++ {
 		gg.Info(i,"this is info")
+		gg.Error(i,"show error",strings.Repeat(" this is a test from golang",i))
 		gg.Warn(i,"this is warn")
-		gg.Error(i,"show error")
 	}
 }
