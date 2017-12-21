@@ -3,7 +3,9 @@ package glog
 import (
 	"testing"
 	//"fmt"
-	"strings"
+	//"strings"
+	"time"
+	"os"
 )
 
 func TestAsset(t *testing.T) {
@@ -18,15 +20,21 @@ func TestError(t *testing.T) {
 
 func TestAll(t *testing.T){
 	//fmt.Println("test all")
+	os.Remove("../temp/1.log")
 	gg := NewGLogFile("../temp/1.log",&Glog{
-		ShowLevel: LevelDebug,
+		ShowLevel: LevelError,
 		SaveLevel: LevelWarn,
-		Flag:ShortFile,
-		MaxLogSize:1000,
+		Flag:0,
+		MaxLogSize:10000000,
 	})
 	for i:=1;i<=1000;i++ {
-		gg.Info(i,"this is info")
-		gg.Error(i,"show error",strings.Repeat(" this is a test from golang",i))
-		gg.Warn(i,"this is warn")
+		go func(i int) {
+			gg.Info(i, "this is info")
+			//gg.Error(i, "show error", strings.Repeat(" this is a test from golang", 1))
+			gg.Error(i, "show error")
+			gg.Warn(i, "this is warn")
+		}(i)
 	}
+	time.Sleep(time.Second*2)
+	gg.Flush()
 }

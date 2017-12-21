@@ -58,12 +58,8 @@ type Glog struct{
 	SaveLog bool
 	//显示 级别
 	ShowLevel string
-	showLevelIndex int
-	showLevelBool bool
 	//保存 级别
 	SaveLevel string
-	saveLevelIndex int
-	saveLevelBool bool
 	//最大的日志大小，字节
 	MaxLogSize int
 	//是否需要手动flush写入文件
@@ -113,11 +109,12 @@ func NewGLogFile(filename string,g *Glog)*Glog {
 	dir := filepath.Dir(filename)
 
 	_,err = os.Stat(dir)
-	if err != nil{
-		Error(err.Error())
-	}
-	if os.IsNotExist(err){
-		os.MkdirAll(dir,0777)
+	if err != nil {
+		if os.IsNotExist(err) {
+			os.MkdirAll(dir, 0777)
+		} else {
+			Error(err)
+		}
 	}
 	g.LogFileName = filename
 	g.createLogFile()
@@ -132,15 +129,14 @@ func (g *Glog)createLogFile(){
 	g.out = bufio.NewWriter(file)
 }
 
-func (g *Glog)output(level,s string,calldepth int){
+func (g *Glog)output(level,s string,calldepth int,showLevelBool,saveLevelBool bool){
 	var shows = []string{fmt.Sprintf("%s%s",formatPrefix(formatLevel(level)),s)}
 	var saves = []string{fmt.Sprintf("%s%s",formatPrefix(level),s)}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	//设置了输出文件
-	if g.Flag &(LongFile|ShortFile) != 0{
-		showLevelBool := g.showLevelBool
-		saveLevelBool := g.saveLevelBool
+	flag := g.Flag
+	if flag &(LongFile|ShortFile) != 0{
 		g.mu.Unlock()
 		if showLevelBool || saveLevelBool {
 			_, file, line, ok := runtime.Caller(calldepth)
@@ -150,7 +146,7 @@ func (g *Glog)output(level,s string,calldepth int){
 			} else {
 				file, _ = filepath.Abs(file)
 				//Trace(err2)
-				if g.Flag&ShortFile != 0 {
+				if flag&ShortFile != 0 {
 					short := file
 					for i := len(file) - 1; i > 0; i-- {
 						if file[i] == '/' {
@@ -171,10 +167,10 @@ func (g *Glog)output(level,s string,calldepth int){
 		}
 		g.mu.Lock()
 	}
-	if g.showLevelBool{
+	if showLevelBool{
 		fmt.Println(strings.Join(shows,"\n"))
 	}
-	if g.saveLevelBool{
+	if saveLevelBool{
 		g.out.WriteString(strings.Join(saves,"\n"))
 		g.out.WriteString("\n")
 		//需要移除掉 标记颜色的内容
@@ -199,7 +195,7 @@ func (g *Glog)Flush(){
 
 //切割日志文件
 func (g *Glog)SplitLogFile(){
-	if g.MaxLogSize <=0 || !g.saveLevelBool{
+	if g.MaxLogSize <=0 || g.SaveLevel ==""{
 		//没有设置日志大小，或是没有保存日志，则跳出
 		return
 	}
@@ -243,53 +239,60 @@ func getLogFileIndex(filename string)int{
 }
 
 func (g *Glog)Debug( a ...interface{}){
-	if !g.checkLevelAll(LevelDebug){
+	showLevelBool,saveLevelBool := g.checkLevelAll(LevelDebug)
+	if !(showLevelBool || saveLevelBool){
 		return
 	}
-	g.output(LevelDebug,fmt.Sprint(a...),2)
+	g.output(LevelDebug,fmt.Sprint(a...),2,showLevelBool,saveLevelBool)
 }
 
 func (g *Glog)Trace(a ...interface{}){
-	if !g.checkLevelAll(LevelTrace){
+	showLevelBool,saveLevelBool := g.checkLevelAll(LevelTrace)
+	if !(showLevelBool || saveLevelBool){
 		return
 	}
-	g.output(LevelTrace,fmt.Sprint( a...),2)
+	g.output(LevelTrace,fmt.Sprint( a...),2,showLevelBool,saveLevelBool)
 }
 
 func (g *Glog)Verbose(a ...interface{}){
-	if !g.checkLevelAll(LevelVerbose){
+	showLevelBool,saveLevelBool := g.checkLevelAll(LevelVerbose)
+		if !(showLevelBool || saveLevelBool){
 		return
 	}
-	g.output(LevelVerbose,fmt.Sprint(a...),2)
+	g.output(LevelVerbose,fmt.Sprint(a...),2,showLevelBool,saveLevelBool)
 }
 
 func (g *Glog)Asset(a ...interface{}){
-	if !g.checkLevelAll(LevelAssert){
+	showLevelBool,saveLevelBool := g.checkLevelAll(LevelAssert)
+	if !(showLevelBool || saveLevelBool){
 		return
 	}
-	g.output(LevelAssert,fmt.Sprint( a...),2)
+	g.output(LevelAssert,fmt.Sprint( a...),2,showLevelBool,saveLevelBool)
 }
 
 
 func (g *Glog)Info(a ...interface{}){
-	if !g.checkLevelAll(LevelInfo){
+	showLevelBool,saveLevelBool := g.checkLevelAll(LevelInfo)
+		if !(showLevelBool || saveLevelBool){
 		return
 	}
-	g.output(LevelInfo,fmt.Sprint(a...),2)
+	g.output(LevelInfo,fmt.Sprint(a...),2,showLevelBool,saveLevelBool)
 }
 
 func (g *Glog)Warn(a ...interface{}){
-	if !g.checkLevelAll(LevelWarn){
+	showLevelBool,saveLevelBool := g.checkLevelAll(LevelWarn)
+		if !(showLevelBool || saveLevelBool){
 		return
 	}
-	g.output(LevelWarn,fmt.Sprint(a...),2)
+	g.output(LevelWarn,fmt.Sprint(a...),2,showLevelBool,saveLevelBool)
 }
 
 func (g *Glog)Error(a ...interface{}){
-	if !g.checkLevelAll(LevelError){
+	showLevelBool,saveLevelBool := g.checkLevelAll(LevelError)
+		if !(showLevelBool || saveLevelBool){
 		return
 	}
-	g.output(LevelError,fmt.Sprint(a...),2)
+	g.output(LevelError,fmt.Sprint(a...),2,showLevelBool,saveLevelBool)
 }
 
 
@@ -396,12 +399,8 @@ func (g *Glog)checkLevel(level1,level2 string)bool{
  判断所有的级别
  @return bool   当为false则后面的就不走了
  */
-func (g *Glog)checkLevelAll(level string)bool{
+func (g *Glog)checkLevelAll(level string)(showLevelBool,saveLevelBool bool){
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	showBool := g.checkLevel(g.ShowLevel,level)
-	saveBool := g.checkLevel(g.SaveLevel,level)
-	g.showLevelBool = showBool
-	g.saveLevelBool = saveBool
-	return showBool || saveBool
+	return g.checkLevel(g.ShowLevel,level) , g.checkLevel(g.SaveLevel,level)
 }
