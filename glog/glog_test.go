@@ -4,8 +4,8 @@ import (
 	"testing"
 	//"fmt"
 	//"strings"
-	"time"
 	"os"
+	"sync"
 )
 
 func TestAsset(t *testing.T) {
@@ -26,15 +26,21 @@ func TestAll(t *testing.T){
 		SaveLevel: LevelWarn,
 		Flag:0,
 		MaxLogSize:10000000,
+		NeedFlush:true,
 	})
-	for i:=1;i<=1000;i++ {
+	var wg sync.WaitGroup
+	for i:=1;i<=100;i++ {
+		wg.Add(1)
 		go func(i int) {
 			gg.Info(i, "this is info")
 			//gg.Error(i, "show error", strings.Repeat(" this is a test from golang", 1))
 			gg.Error(i, "show error")
 			gg.Warn(i, "this is warn")
+			wg.Done()
 		}(i)
+		//time.Sleep(2*time.Second)
 	}
-	time.Sleep(time.Second*2)
+	//time.Sleep(time.Second*2)
+	wg.Wait()
 	gg.Flush()
 }

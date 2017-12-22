@@ -126,7 +126,7 @@ func (g *Glog)createLogFile(){
 	if err != nil{
 		Error(err)
 	}
-	g.out = bufio.NewWriter(file)
+	g.out = bufio.NewWriterSize(file,4096)
 }
 
 func (g *Glog)output(level,s string,calldepth int,showLevelBool,saveLevelBool bool){
