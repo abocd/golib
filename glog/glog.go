@@ -12,8 +12,8 @@ import (
 	//"io/ioutil"
 	"io/ioutil"
 	"strconv"
-	"archive/tar"
 	"io"
+	"compress/gzip"
 )
 
 const (
@@ -71,7 +71,7 @@ type Glog struct{
 	//文件名称
 	LogFileName string
 	//压缩备份日志
-	TarLog bool
+	GzLog bool
     // 日志保存方式
 	out *bufio.Writer
 }
@@ -198,6 +198,7 @@ func (g *Glog)Flush(){
 }
 
 //切割日志文件
+//刷新文件的时候才切割日志，所以在启用了flush的时候，文件大小判断可能不是太准
 func (g *Glog)SplitLogFile(){
 	if g.MaxLogSize <=0 || g.SaveLevel ==""{
 		//没有设置日志大小，或是没有保存日志，则跳出
@@ -208,34 +209,24 @@ func (g *Glog)SplitLogFile(){
 		return
 	}
 	if file.Size() > int64(g.MaxLogSize){
-        index := getLogFileIndex(g.LogFileName)
-		if g.TarLog{
+        index := g.getLogFileIndex(g.LogFileName)
+		if g.GzLog {
 			//启用了压缩日志
-        	backFileName := fmt.Sprintf("%s.%d.tar.gz",g.LogFileName,index)
+        	backFileName := fmt.Sprintf("%s.%d.gz",g.LogFileName,index)
         	tarfile,err := os.Create(backFileName)
         	if err != nil{
         		Error(err)
         		return
 			}
 			defer tarfile.Close()
-            tw := tar.NewWriter(tarfile)
-            sfile,err := os.Stat(g.LogFileName)
+            tw := gzip.NewWriter(tarfile)
             fr,_ := os.Open(g.LogFileName)
 			if err != nil{
 				Error(err)
 				return
 			}
-            theader,err := tar.FileInfoHeader(sfile,"")
-			if err != nil{
-				Error(err)
-				return
-			}
-			theader.Name = filepath.Base(fmt.Sprintf("%s.%d",g.LogFileName,index))
-            err = tw.WriteHeader(theader)
-			if err != nil{
-				Error(err)
-				return
-			}
+            theader := gzip.Header{Name:filepath.Base(fmt.Sprintf("%s.%d",g.LogFileName,index))            	}
+			tw.Header = theader
             n,err := io.Copy(tw,fr)
 			if err != nil{
 				Error(err)
@@ -257,7 +248,7 @@ func (g *Glog)SplitLogFile(){
 	}
 }
 
-func getLogFileIndex(filename string)int{
+func (g *Glog)getLogFileIndex(filename string)int{
 	dir := filepath.Dir(filename)
 	fileList,err := ioutil.ReadDir(dir)
 	if err != nil{
@@ -271,9 +262,15 @@ func getLogFileIndex(filename string)int{
 		if strings.Index(name,basenameAfter) !=0{
 			continue
 		}
-		index := strings.Replace(name,basenameAfter,"",1)
-		indexInt,err := strconv.Atoi(index)
-		if err != nil{
+		var indexInt int
+		index := strings.Replace(name, basenameAfter, "", 1)
+		if g.GzLog{
+			//启用了压缩，则文件判断方式变了
+			s:=strings.Split(index,".")
+			index = s[0]
+		}
+		indexInt, err = strconv.Atoi(index)
+		if err != nil {
 			indexInt = 0
 		}
 		if indexInt > defaultIndex{

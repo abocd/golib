@@ -22,15 +22,15 @@ func TestAll(t *testing.T){
 	//fmt.Println("test all")
 	os.Remove("../temp/1.log")
 	gg := NewGLogFile("../temp/1.log",&Glog{
-		ShowLevel: "",
-		SaveLevel: LevelWarn,
-		Flag:0,
-		MaxLogSize:1000,
-		NeedFlush:true,
-		TarLog:true,
+		ShowLevel:  "",
+		SaveLevel:  LevelWarn,
+		Flag:       0,
+		MaxLogSize: 1000,
+		NeedFlush:  true,
+		GzLog:      true,
 	})
 	var wg sync.WaitGroup
-	for i:=1;i<=10000;i++ {
+	for i:=1;i<=50300;i++ {
 		wg.Add(1)
 		go func(i int) {
 			gg.Info(i, "this is info")
