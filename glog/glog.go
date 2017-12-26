@@ -12,6 +12,8 @@ import (
 	//"io/ioutil"
 	"io/ioutil"
 	"strconv"
+	"archive/tar"
+	"io"
 )
 
 const (
@@ -68,6 +70,8 @@ type Glog struct{
 	Flag int
 	//文件名称
 	LogFileName string
+	//压缩备份日志
+	TarLog bool
     // 日志保存方式
 	out *bufio.Writer
 }
@@ -205,8 +209,50 @@ func (g *Glog)SplitLogFile(){
 	}
 	if file.Size() > int64(g.MaxLogSize){
         index := getLogFileIndex(g.LogFileName)
-		if os.Rename(g.LogFileName,fmt.Sprintf("%s.%d",g.LogFileName,index)) ==nil{
-			g.createLogFile()
+		if g.TarLog{
+			//启用了压缩日志
+        	backFileName := fmt.Sprintf("%s.%d.tar.gz",g.LogFileName,index)
+        	tarfile,err := os.Create(backFileName)
+        	if err != nil{
+        		Error(err)
+        		return
+			}
+			defer tarfile.Close()
+            tw := tar.NewWriter(tarfile)
+            sfile,err := os.Stat(g.LogFileName)
+            fr,_ := os.Open(g.LogFileName)
+			if err != nil{
+				Error(err)
+				return
+			}
+            theader,err := tar.FileInfoHeader(sfile,"")
+			if err != nil{
+				Error(err)
+				return
+			}
+			theader.Name = filepath.Base(fmt.Sprintf("%s.%d",g.LogFileName,index))
+            err = tw.WriteHeader(theader)
+			if err != nil{
+				Error(err)
+				return
+			}
+            n,err := io.Copy(tw,fr)
+			if err != nil{
+				Error(err)
+				return
+			}
+			err = tw.Close()
+			if err != nil{
+				Error(err,n,theader)
+				return
+			}
+			os.Truncate(g.LogFileName,0)
+		} else {
+			backFileName := fmt.Sprintf("%s.%d",g.LogFileName,index)
+			if os.Rename(g.LogFileName, backFileName) != nil {
+				return
+			}
+				g.createLogFile()
 		}
 	}
 }
