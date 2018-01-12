@@ -20,7 +20,7 @@ func CompleteUrl(pageUrl,currUrl string)string{
 /**
  判断是否为绝对路径
  */
-func checkAbsUrl(currUrl string)bool{
+func CheckAbsUrl(currUrl string)bool{
 	exp,err2 := regexp.Compile("^(http://|https://|ftp://)")
 	if err2 != nil{
 		return false

@@ -5,6 +5,9 @@ import (
 	"strconv"
 )
 
+/**
+ 切割字符串到指定位置
+ */
 func Substr(str string, start int, end int) string {
 	rs := []rune(str)
 	length := len(rs)
@@ -22,36 +25,25 @@ func Substr(str string, start int, end int) string {
 		return ""
 	}
 
-	if end < 0 || end > length {
+	if end < 0 {
 		return ""
 	}
-	return string(rs[start:end])
+	if end >= (length - 1){
+		end = length - 1
+	}
+	return string(rs[start:end+1])
 }
 
-
+/**
+ 切割字符串
+ */
 func SubstrLength(str string,start int, length int)string{
-	rs := []rune(str)
-	slength := len(rs)
-	if start > slength {
-		return ""
-	}
-	if start < 0 {
-		start = slength + start
-	}
-
-	if length < 0{
-		return ""
-	}
-	end := start + length
-
-
-	if end > slength {
-		end = slength
-	}
-	return string(rs[start:end])
+	return Substr(str,start,start + length - 1)
 }
 
-
+/**
+ 判断字符串是否是数字
+ */
 func MatchStringNum(s string)(isNumber bool,num int){
 	isNumber,_ = regexp.Match("^\\d+$",[]byte(s))
 	if isNumber {
