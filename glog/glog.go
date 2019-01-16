@@ -56,8 +56,8 @@ const (
 type Glog struct{
 	//锁
 	mu sync.Mutex
-	//是否设置了日志保存
-	SaveLog bool
+	//是否跳过日志保存
+	SkipSaveLog bool
 	//显示 级别
 	ShowLevel string
 	//保存 级别
@@ -66,7 +66,7 @@ type Glog struct{
 	MaxLogSize int
 	//是否需要手动flush写入文件
 	NeedFlush bool
-	// 文件级别
+	// 是否显示调用的位置
 	Flag int
 	//文件名称
 	LogFileName string
@@ -174,7 +174,7 @@ func (g *Glog)output(level,s string,calldepth int,showLevelBool,saveLevelBool bo
 	if showLevelBool{
 		fmt.Println(strings.Join(shows,"\n"))
 	}
-	if saveLevelBool{
+	if !g.SkipSaveLog && saveLevelBool{
 		g.out.WriteString(strings.Join(saves,"\n"))
 		g.out.WriteString("\n")
 		//需要移除掉 标记颜色的内容
